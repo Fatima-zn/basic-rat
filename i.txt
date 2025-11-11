@@ -1,0 +1,21 @@
+PERSISTENCE IDEAS 
+
+File Placement:
+    - copy self : copy malware to system directory
+    - use current : run from current location
+    - multiple copies : redundant copies in different locations
+
+Execution Timing:
+    - immediate : Run immediately on startup
+    - delayed : Wait random time before executing
+    - conditional : Only run under specific conditions
+    - staged : Multiple stages with delays
+
+Stealth Techniques:
+    - process names : Use legitimate-looking process names
+    - file locations : Place in system directories
+    - registry names : Use common registry key names
+    - execution timing : Avoid immediate execution
+
+
+DON'T FORGET TO TAKE A SNAPSHOT BEFORE TESTING!
