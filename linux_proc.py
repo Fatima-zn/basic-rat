@@ -27,8 +27,6 @@ class LinuxProcManager():
         if not os.access(self._proc_path, os.R_OK):
             raise RuntimeError("No read access to /proc filesystem")
         
-        
-        
     
     def _read_proc_file(self, pid, filename):
         try:
@@ -50,18 +48,7 @@ class LinuxProcManager():
         except:
             return str(uid)
         
-        
-        
-        
-    def _get_groupname_from_gif(self, gid):
-        try:
-            return grp.getgrgid(gid).gr_name
-        except:
-            return str(gid)
-      
-      
-      
-        
+
     def _get_process_capabilities(self, pid):
         try:
             status_content = self._read_proc_file(pid, "status")
@@ -369,6 +356,7 @@ class LinuxProcManager():
     def get_system_info(self):
 
         try:
+            # Basic system information
             system_info = {
                 'platform': 'Linux',
                 'hostname': platform.node(),
@@ -377,11 +365,10 @@ class LinuxProcManager():
                 'boot_time': datetime.fromtimestamp(psutil.boot_time()).isoformat()
             }
             
-            
-            
-
+            # Distribution information
             distro_info = {}
             try:
+                # Try to get distribution info
                 if os.path.exists('/etc/os-release'):
                     with open('/etc/os-release', 'r') as f:
                         for line in f:
@@ -393,9 +380,7 @@ class LinuxProcManager():
             
             system_info['distribution'] = distro_info
             
-
-
-
+            # CPU information from /proc/cpuinfo
             try:
                 if os.path.exists('/proc/cpuinfo'):
                     with open('/proc/cpuinfo', 'r') as f:
@@ -418,10 +403,7 @@ class LinuxProcManager():
             except:
                 pass
             
-
-
-
-
+            # Memory information from /proc/meminfo
             try:
                 if os.path.exists('/proc/meminfo'):
                     with open('/proc/meminfo', 'r') as f:
@@ -443,9 +425,7 @@ class LinuxProcManager():
             except:
                 pass
             
-
-
-
+            # Load average from /proc/loadavg
             try:
                 with open('/proc/loadavg', 'r') as f:
                     load_avg = f.read().strip().split()
@@ -457,10 +437,7 @@ class LinuxProcManager():
             except:
                 pass
             
-
-
-
-
+            #Uptime from /proc/uptime
             try:
                 with open('/proc/uptime', 'r') as f:
                     uptime_seconds = float(f.readline().split()[0])
@@ -469,9 +446,6 @@ class LinuxProcManager():
                 pass
             
             return system_info
-            
-            
-            
             
         except Exception as e:
             return {'error': f'Linux system info failed: {e}'}

