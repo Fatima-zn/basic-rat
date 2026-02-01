@@ -1,6 +1,10 @@
-flask
-requests
-gunicorn
-python-dotenv
-psutil
-wmi
+Flask==3.0.0
+requests==2.31.0
+psutil==5.9.6
+pynput==1.7.6
+Pillow==10.1.0
+mss==9.0.1
+pywin32==306; sys_platform == 'win32'
+psycopg2-binary==2.9.9
+gunicorn==21.2.0
+python-dotenv==1.0.0
