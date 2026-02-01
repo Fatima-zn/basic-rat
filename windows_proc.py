@@ -105,47 +105,36 @@ class WindowsProcManager():
     
     
     
-    def get_all_processes(self, detailed=True):
-        try:
-            processes = []
-            
-            for proc in psutil.process_iter(['pid', 'name', 'username', 'cpu_percent', 'memory_percent', 'create_time', "status"]):
-                try:
-                    process_info = proc.info
-                    
-                    if len(processes) >= 30:  #TEST
-                        break
-                    
-                    if detailed:
-                        with proc.oneshot():
-                            process_info.update({
-                                "exe": proc.exe(),
-                                "cmdline": proc.cmdline(),
-                                "cpu_times": proc.cpu_times(),
-                                "memory_info": proc.memory_info(),
-                                "ppid": proc.ppid(),
-                                "priority": proc.nice(),
-                                "num_handles": proc.num_handles(),
-                                "is_system_process": proc.username() == "SYSTEM",
-                                "cwd": proc.cwd(),
-                                "num_threads": proc.num_threads(),
-                                "open_files": proc.open_files(),
-                                "connections": proc.net_connections(),
-                                "session_id": self._get_windows_session_id(proc.pid),
-                                "services": self._get_process_services(proc.pid),
-                                "privileges": self._get_process_privileges(proc.pid)
-                            })
-                            
-                    processes.append(process_info)
-                
-                except (psutil.NoSuchProcess, psutil.AccessDenied):
-                    continue
-            
-            return processes
-        
-        except Exception as e:
-            return {'error': f'Windows process enumeration failed; {e}'}
+    def traverse_process_tree(self, tree):
     
+        if isinstance(tree, dict) and "error" in tree:
+            return []
+    
+        result = []
+    
+        def traverse_node(node, depth=0):
+            if not node:
+                return
+        
+        # Ajoute le nœud courant avec son niveau de profondeur
+            node_with_depth = node.copy()
+            node_with_depth['depth'] = depth
+            result.append(node_with_depth)
+        
+        # Parcourt récursivement les enfants
+            for child in node.get('children', []):
+                traverse_node(child, depth + 1)
+    
+    # Si l'arbre est une liste (racines multiples)
+        if isinstance(tree, list):
+            for root in tree:
+                traverse_node(root)
+    
+        return result
+    
+    def get_all_processes(self, detailed=True):
+        processes = self.get_process_tree()
+        return self.traverse_process_tree(processes)
     
     
     

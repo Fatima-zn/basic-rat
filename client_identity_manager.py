@@ -11,8 +11,19 @@ class ClientIdentityManager:
     def _get_hardware_based_client_id(self):
         try:
             import subprocess
-
-            result = subprocess.check_output('wmic csproduct get uuid', shell=True)
+            
+            if self.platform == "Windows":
+                startupinfo = subprocess.STARTUPINFO()
+                startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
+                startupinfo.wShowWindow = subprocess.SW_HIDE
+                result = subprocess.check_output(
+                    'wmic csproduct get uuid', 
+                    shell=True,
+                    startupinfo=startupinfo,
+                    creationflags=subprocess.CREATE_NO_WINDOW
+                )
+            else:
+                result = subprocess.check_output('wmic csproduct get uuid', shell=True)
             lines = result.decode().split('\n')
             if len(lines) >= 2:
                 hardware_id = lines[1].strip()

